@@ -23,6 +23,7 @@ const getUserWithEmail = function(email) {
     SELECT * FROM users
     WHERE email = $1
     `;
+    
   return pool
     .query(queryString, [email])
     .then(result => result.rows[0] || null)
@@ -39,6 +40,7 @@ const getUserWithId = function(id) {
     SELECT * FROM users
     WHERE id = $1
     `;
+
   return pool
     .query(queryString, [id])
     .then(result => result.rows[0] || null)
@@ -72,7 +74,23 @@ const addUser = function(user) {
  * @return {Promise<[{}]>} A promise to the reservations.
  */
 const getAllReservations = function(guest_id, limit = 10) {
-  return getAllProperties(null, 2);
+  const queryString = `
+    SELECT properties.*, reservations.*, AVG(rating) as average_rating
+    FROM reservations
+    JOIN properties ON reservations.property_id = properties.id
+    JOIN property_reviews ON properties.id = property_reviews.property_id
+    WHERE reservations.guest_id = $1
+    AND end_date < now()::date
+    GROUP BY properties.id, reservations.id
+    ORDER BY start_date
+    LIMIT $2;
+  `;
+  const values = [guest_id, limit];
+
+  return pool
+    .query(queryString, values)
+    .then(result => result.rows)
+    .catch(error => console.log(error));
 };
 
 /// Properties
